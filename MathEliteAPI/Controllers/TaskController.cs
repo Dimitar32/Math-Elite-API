@@ -1,5 +1,6 @@
 ﻿using MathEliteAPI.Data;
 using MathEliteAPI.DataTransferObjects;
+using MathEliteAPI.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,12 +17,13 @@ namespace MathEliteAPI.Controllers
             _context = context;
         }
 
-        [HttpPost("addNewTask")]
+        [HttpPost("AddNewTask")]
         public async Task<IActionResult> CreateTask([FromBody] CreateTaskDto dto)
         {
             var newTask = new Models.Task
             {
-                Grade = dto.Grade,
+                Topic = await _context.Topics.FindAsync(dto.TopicId),
+                TopicId = dto.TopicId,
                 Title = dto.Title,
                 Expression = dto.Expression,
                 Answer = dto.Answer,
@@ -31,13 +33,17 @@ namespace MathEliteAPI.Controllers
             _context.Tasks.Add(newTask); // Add task to DB
             await _context.SaveChangesAsync();
 
-            return Ok(newTask);
+            return CreatedAtAction(nameof(GetTaskById), new { id = newTask.Id }, newTask);
         }
 
-        [HttpGet("getTaskById")]
+        [HttpGet("GetTaskById")]
         public async Task<IActionResult> GetTaskById(int id)
         {
-            var task = await _context.Tasks.FindAsync(id);
+            var task = await _context.Tasks
+                .Include(t => t.Topic) // Eagerly load the Topic property
+                .ThenInclude(topic => topic.Grade) // Optionally include Grade if needed
+                .Where(t => t.Id == id)
+                .ToListAsync();
 
             if (task == null)
             {
@@ -47,17 +53,19 @@ namespace MathEliteAPI.Controllers
             return Ok(task);
         }
 
-        [HttpGet("getTasksByGrade/{grade}")]
-        public async Task<IActionResult> GetTasksByGrade(string grade)
+        [HttpGet("GetTasksByGrade/{gradeNumber}")]
+        public async Task<IActionResult> GetTasksByGrade(int gradeNumber)
         {
             var tasks = await _context.Tasks
-                .Where(t => t.Grade == grade)
+                .Include(t => t.Topic) // Eagerly load the Topic property
+                .ThenInclude(topic => topic.Grade) // Optionally include Grade if needed
+                .Where(t => t.Topic.Grade.Number == gradeNumber)
                 .ToListAsync();
 
-            if (!tasks.Any())
-            {
-                return NotFound(new { message = "No tasks found for this grade" });
-            }
+            //if (!tasks.Any())
+            //{
+            //    return NotFound(new { message = "No tasks found for this grade" });
+            //}
 
             return Ok(tasks);
         }
