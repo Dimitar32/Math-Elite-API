@@ -44,6 +44,14 @@ namespace MathEliteAPI.Controllers
                 return StatusCode(500, "Error updating the user.");
             }
         }
+
+        [HttpGet("GetAllUsers")]
+        public async Task<IActionResult> GetAllUsers()
+        {
+            var users = await _context.Users.ToListAsync();
+            return Ok(users);
+        }
+
     }
 
 
