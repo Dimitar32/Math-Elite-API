@@ -12,6 +12,7 @@ namespace MathEliteAPI.Data
         public DbSet<Models.Task> Tasks { get; set; }
         public DbSet<Grade> Grades { get; set; }
         public DbSet<Topic> Topics { get; set; }
+        public DbSet<Certificate> Certificates { get; set; }
 
 
         //protected override void OnModelCreating(ModelBuilder modelBuilder)
