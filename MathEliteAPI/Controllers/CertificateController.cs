@@ -1,8 +1,11 @@
 ﻿using MathEliteAPI.Data;
 using MathEliteAPI.DataTransferObjects;
 using MathEliteAPI.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 namespace MathEliteAPI.Controllers
 {
@@ -17,6 +20,33 @@ namespace MathEliteAPI.Controllers
             _context = context;
         }
 
+        [Authorize]
+        [HttpGet("by-user")]
+        public async Task<IActionResult> GetCertificatesByUser()
+        {
+            var email = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email || c.Type == JwtRegisteredClaimNames.Email)?.Value;
+
+            if (string.IsNullOrEmpty(email))
+            {
+                return Unauthorized("Email is missing in the token.");
+            }
+
+            Console.WriteLine($"Authenticated Email: {email}");
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            var certificates = await _context.Certificates
+                                             .Where(c => c.UserId == user.Id)
+                                             .ToListAsync();
+
+            return Ok(certificates);
+        }
+
         [HttpGet("GetAllCertificates")]
         public async Task<IActionResult> GetAllCertificates()
         {
@@ -24,7 +54,7 @@ namespace MathEliteAPI.Controllers
             return Ok(certificates);
         }
 
-        [HttpGet("GetCertificatesByUser")]
+        [HttpGet("GetCertificatesByUserId/{userId}")]
         public async Task<IActionResult> GetCertificatesByUser(int userId)
         {
             var certificates = await _context.Certificates.ToListAsync();
@@ -59,7 +89,6 @@ namespace MathEliteAPI.Controllers
 
             return CreatedAtAction(nameof(GetCertificatesById), new { id = newCertificate.Id }, newCertificate);
         }
-
 
         [HttpGet("GetCertificatesById")]
         public async Task<IActionResult> GetCertificatesById(int id)
